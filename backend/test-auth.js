@@ -1,7 +1,11 @@
 // backend/test-auth.js
-require("dotenv").config();
-const jwt = require("jsonwebtoken");
-const { Pool } = require("pg");
+import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
+import pkg from "pg";
+
+const { Pool } = pkg;
+
+dotenv.config();
 
 const pool = new Pool({
   host: process.env.DB_HOST,

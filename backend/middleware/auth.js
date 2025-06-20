@@ -1,7 +1,8 @@
 // backend/middleware/auth.js
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
-const authenticateToken = (req, res, next) => {
+
+export const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
@@ -24,13 +25,14 @@ const authenticateToken = (req, res, next) => {
     if (error.name === "TokenExpiredError") {
       return res.status(403).json({ message: "Token expired" });
     }
+
     console.error("Auth middleware error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 // Role-based access control
-const requireRole = (...roles) => {
+export const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required" });
@@ -42,9 +44,4 @@ const requireRole = (...roles) => {
 
     next();
   };
-};
-
-module.exports = {
-  authenticateToken,
-  requireRole,
 };

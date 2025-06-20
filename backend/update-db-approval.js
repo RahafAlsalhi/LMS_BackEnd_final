@@ -1,6 +1,10 @@
 // backend/update-db-approval.js
-require("dotenv").config();
-const { Pool } = require("pg");
+import dotenv from "dotenv";
+import pkg from "pg";
+
+dotenv.config();
+
+const { Pool } = pkg;
 
 const pool = new Pool({
   host: process.env.DB_HOST,

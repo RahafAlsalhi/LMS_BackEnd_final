@@ -1,6 +1,9 @@
 // backend/troubleshoot-db.js
-require("dotenv").config();
-const { Pool } = require("pg");
+import dotenv from "dotenv";
+import pkg from "pg";
+
+dotenv.config();
+const { Pool } = pkg;
 
 async function troubleshootConnection() {
   console.log("🔍 Database Connection Troubleshoot\n");

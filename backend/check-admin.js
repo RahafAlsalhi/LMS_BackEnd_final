@@ -1,7 +1,10 @@
 // backend/check-admin.js
-require("dotenv").config();
-const { Pool } = require("pg");
-const bcrypt = require("bcryptjs");
+import dotenv from "dotenv";
+import pkg from "pg";
+import bcrypt from "bcryptjs";
+
+dotenv.config();
+const { Pool } = pkg;
 
 const pool = new Pool({
   host: process.env.DB_HOST,

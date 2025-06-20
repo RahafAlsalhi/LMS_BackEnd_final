@@ -1,103 +1,95 @@
-// backend/debug-server.js
-// This script will help identify which route is causing the problem
+// backend/troubleshoot-db.js
+import dotenv from "dotenv";
+import pkg from "pg";
 
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-require("dotenv").config();
+dotenv.config();
+const { Pool } = pkg;
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+async function troubleshootConnection() {
+  console.log("🔍 Database Connection Troubleshoot\n");
 
-// Middleware
-app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true,
-  })
-);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+  // Show current environment variables
+  console.log("📋 Current .env values:");
+  console.log(`   DB_HOST: ${process.env.DB_HOST || "NOT SET"}`);
+  console.log(`   DB_PORT: ${process.env.DB_PORT || "NOT SET"}`);
+  console.log(`   DB_NAME: ${process.env.DB_NAME || "NOT SET"}`);
+  console.log(`   DB_USER: ${process.env.DB_USER || "NOT SET"}`);
+  console.log(
+    `   DB_PASSWORD: ${process.env.DB_PASSWORD ? "***SET***" : "NOT SET"}\n`
+  );
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "OK",
-    message: "LMS API is running",
-    timestamp: new Date().toISOString(),
-  });
-});
+  if (!process.env.DB_PASSWORD) {
+    console.error("❌ DB_PASSWORD is not set in .env file!");
+    console.log("\n🔧 Fix: Add DB_PASSWORD=your_actual_password to .env file");
+    process.exit(1);
+  }
 
-console.log("✅ Basic server setup complete");
+  // Test different connection scenarios
+  const configs = [
+    {
+      name: "Default Config",
+      config: {
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 5432,
+        database: process.env.DB_NAME || "lms_db",
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD,
+      },
+    },
+    {
+      name: "Without Database (test user auth)",
+      config: {
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 5432,
+        database: "postgres", // Default database
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD,
+      },
+    },
+  ];
 
-// Test each route one by one
-try {
-  console.log("🔍 Testing auth routes...");
-  const authRoutes = require("./routes/auth");
-  app.use("/api/auth", authRoutes);
-  console.log("✅ Auth routes loaded successfully");
-} catch (error) {
-  console.error("❌ Error loading auth routes:", error.message);
+  for (const { name, config } of configs) {
+    console.log(`🧪 Testing: ${name}`);
+    const pool = new Pool(config);
+
+    try {
+      const client = await pool.connect();
+      console.log(`   ✅ Connection successful!`);
+
+      const result = await client.query("SELECT version(), current_database()");
+      console.log(`   📊 Database: ${result.rows[0].current_database}`);
+      console.log(
+        `   🐘 PostgreSQL Version: ${result.rows[0].version.split(" ")[1]}`
+      );
+
+      client.release();
+      await pool.end();
+      console.log("");
+      break; // If successful, no need to test further
+    } catch (error) {
+      console.log(`   ❌ Failed: ${error.message}`);
+      await pool.end();
+
+      if (error.code === "28P01") {
+        console.log("   💡 This is a password authentication error");
+      } else if (error.code === "3D000") {
+        console.log("   💡 Database does not exist");
+      } else if (error.code === "ECONNREFUSED") {
+        console.log("   💡 PostgreSQL server is not running");
+      }
+      console.log("");
+    }
+  }
+
+  console.log("🔧 Common Solutions:");
+  console.log("   1. Check PostgreSQL is running");
+  console.log("   2. Verify password in .env file");
+  console.log("   3. Create database: CREATE DATABASE lms_db;");
+  console.log("   4. Check user permissions");
+  console.log("\n📱 Quick fixes to try:");
+  console.log("   • Open pgAdmin and test connection manually");
+  console.log("   • Reset postgres password if needed");
+  console.log("   • Use different user if postgres doesn't work");
 }
 
-try {
-  console.log("🔍 Testing user routes...");
-  const userRoutes = require("./routes/users");
-  app.use("/api/users", userRoutes);
-  console.log("✅ User routes loaded successfully");
-} catch (error) {
-  console.error("❌ Error loading user routes:", error.message);
-}
-
-try {
-  console.log("🔍 Testing course routes...");
-  const courseRoutes = require("./routes/courses");
-  app.use("/api/courses", courseRoutes);
-  console.log("✅ Course routes loaded successfully");
-} catch (error) {
-  console.error("❌ Error loading course routes:", error.message);
-}
-
-try {
-  console.log("🔍 Testing enrollment routes...");
-  const enrollmentRoutes = require("./routes/enrollments");
-  app.use("/api/enrollments", enrollmentRoutes);
-  console.log("✅ Enrollment routes loaded successfully");
-} catch (error) {
-  console.error("❌ Error loading enrollment routes:", error.message);
-}
-
-try {
-  console.log("🔍 Testing quiz routes...");
-  const quizRoutes = require("./routes/quizzes");
-  app.use("/api/quizzes", quizRoutes);
-  console.log("✅ Quiz routes loaded successfully");
-} catch (error) {
-  console.error("❌ Error loading quiz routes:", error.message);
-}
-
-try {
-  console.log("🔍 Testing assignment routes...");
-  const assignmentRoutes = require("./routes/assignments");
-  app.use("/api/assignments", assignmentRoutes);
-  console.log("✅ Assignment routes loaded successfully");
-} catch (error) {
-  console.error("❌ Error loading assignment routes:", error.message);
-}
-
-// 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-    path: req.originalUrl,
-    method: req.method,
-  });
-});
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Debug server running on port ${PORT}`);
-  console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`);
-});
+troubleshootConnection();

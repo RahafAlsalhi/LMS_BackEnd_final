@@ -1,8 +1,32 @@
 // backend/server.js
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import path from "path";
+import multer from "multer";
+import { fileURLToPath } from "url";
+import { Pool } from "pg";
+import dotenv from "dotenv";
+// In your app.js or server.js
+// Import routers
+import authRouter from "./routes/auth.router.js";
+import usersRouter from "./routes/users.router.js";
+import categoriesRouter from "./routes/categories.router.js";
+import coursesRouter from "./routes/courses.router.js";
+import modulesRouter from "./routes/modules.router.js";
+import lessonsRouter from "./routes/lessons.router.js";
+import enrollmentsRouter from "./routes/enrollments.router.js";
+import quizzesRouter from "./routes/quizzes.router.js";
+import assignmentsRouter from "./routes/assignments.router.js";
+import submissionsRouter from "./routes/submissions.router.js";
+import quizAttemptsRouter from "./routes/quiz-attempts.router.js";
+
+// ES Module setup
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,18 +39,57 @@ app.use(
 );
 
 // CORS configuration
+// CORS configuration
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Range",
+      "Accept-Ranges",
+      "Content-Length",
+      "Content-Range",
+    ],
+    exposedHeaders: ["Content-Length", "Content-Range", "Accept-Ranges"],
   })
 );
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// Enhanced video-specific CORS headers
+app.use("/uploads", (req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [process.env.FRONTEND_URL || "http://localhost:5173"];
+
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+
+  res.header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Range, Accept-Ranges, Content-Length, Content-Range"
+  );
+  res.header(
+    "Access-Control-Expose-Headers",
+    "Content-Length, Content-Range, Accept-Ranges"
+  );
+  res.header("Accept-Ranges", "bytes");
+  res.header("Cache-Control", "no-cache");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  next();
+});
+// Serve static files (uploaded videos, assignments, submissions)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Request logging middleware (development only)
 if (process.env.NODE_ENV === "development") {
@@ -36,16 +99,18 @@ if (process.env.NODE_ENV === "development") {
   });
 }
 
-// API Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/users", require("./routes/users"));
-app.use("/api/categories", require("./routes/categories"));
-app.use("/api/courses", require("./routes/courses"));
-app.use("/api/modules", require("./routes/modules"));
-app.use("/api/lessons", require("./routes/lessons"));
-app.use("/api/enrollments", require("./routes/enrollments"));
-app.use("/api/quizzes", require("./routes/quizzes"));
-app.use("/api/assignments", require("./routes/assignments"));
+// API Routes - EXACT SAME ENDPOINTS AS BEFORE
+app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/categories", categoriesRouter);
+app.use("/api/courses", coursesRouter);
+app.use("/api/modules", modulesRouter);
+app.use("/api/lessons", lessonsRouter);
+app.use("/api/enrollments", enrollmentsRouter);
+app.use("/api/quizzes", quizzesRouter);
+app.use("/api/assignments", assignmentsRouter);
+app.use("/api/submissions", submissionsRouter);
+app.use("/api/quiz-attempts", quizAttemptsRouter);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -62,13 +127,12 @@ app.get("/api/health", (req, res) => {
 if (process.env.NODE_ENV === "development") {
   app.get("/api/test-db", async (req, res) => {
     try {
-      const { Pool } = require("pg");
       const pool = new Pool({
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
         database: process.env.DB_NAME,
         user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
+        password: String(process.env.DB_PASSWORD || "deraabka20"),
       });
 
       const result = await pool.query(
@@ -98,6 +162,39 @@ app.use((err, req, res, next) => {
 
   if (process.env.NODE_ENV === "development") {
     console.error("Stack:", err.stack);
+  }
+
+  // Handle multer errors
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        success: false,
+        message: "File size too large",
+      });
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(400).json({
+        success: false,
+        message: "Unexpected file field",
+      });
+    }
+    if (err.code === "LIMIT_FILE_COUNT") {
+      return res.status(400).json({
+        success: false,
+        message: "Too many files",
+      });
+    }
+  }
+
+  // Handle custom file type errors
+  if (
+    err.message === "Only video files are allowed!" ||
+    err.message === "Only document files are allowed!"
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
   }
 
   // Handle specific error types
@@ -137,6 +234,9 @@ app.use((req, res) => {
       "GET /api/auth/me",
       "GET /api/courses",
       "GET /api/courses/:id",
+      "GET /api/modules/course/:courseId",
+      "POST /api/lessons (with file upload)",
+      "POST /api/assignments/:id/submit (with file upload)",
       ...(process.env.NODE_ENV === "development" ? ["GET /api/test-db"] : []),
     ],
   });
@@ -161,6 +261,7 @@ const server = app.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
   console.log(`💚 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`📁 File Uploads: http://localhost:${PORT}/uploads`);
   if (process.env.NODE_ENV === "development") {
     console.log(`🔍 DB Test: http://localhost:${PORT}/api/test-db`);
   }
@@ -178,4 +279,4 @@ server.on("error", (error) => {
   }
 });
 
-module.exports = app;
+export default app;
