@@ -5,6 +5,7 @@ import { SubmissionsController } from "../controllers/submissions.controller.js"
 import { uploadSubmission } from "../middleware/upload.js";
 
 const router = express.Router();
+
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof Error) {
     if (err.message.includes("Only document files are allowed")) {
@@ -22,6 +23,7 @@ const handleUploadError = (err, req, res, next) => {
   }
   next();
 };
+
 // Student routes
 // Submit assignment
 router.post(
@@ -33,9 +35,27 @@ router.post(
   SubmissionsController.submitAssignment
 );
 
+// 🆕 NEW: Alternative route for StudentManagement component (matches the controller expectation)
+router.post(
+  "/:assignmentId",
+  authenticateToken,
+  requireRole("student"),
+  uploadSubmission.single("file"), // Note: using 'file' to match controller expectation
+  handleUploadError,
+  SubmissionsController.submitAssignment
+);
+
 // Get my submission for specific assignment
 router.get(
   "/assignment/:assignmentId/my",
+  authenticateToken,
+  requireRole("student"),
+  SubmissionsController.getMySubmission
+);
+
+// 🆕 NEW: Alternative route for StudentManagement component
+router.get(
+  "/:assignmentId/my",
   authenticateToken,
   requireRole("student"),
   SubmissionsController.getMySubmission
@@ -51,7 +71,14 @@ router.get(
 
 // Download assignment file
 router.get(
-  "/assignment/:assignmentId/download",
+  "/:assignmentId/download",
+  authenticateToken,
+  SubmissionsController.downloadAssignmentFile
+);
+
+// 🆕 NEW: Simplified download route for StudentManagement component
+router.get(
+  "/download/:assignmentId",
   authenticateToken,
   SubmissionsController.downloadAssignmentFile
 );
@@ -65,6 +92,14 @@ router.get(
   SubmissionsController.getAssignmentSubmissions
 );
 
+// 🆕 NEW: Get submission statistics for an assignment (for instructor analytics)
+router.get(
+  "/assignment/:assignmentId/stats",
+  authenticateToken,
+  requireRole("instructor", "admin"),
+  SubmissionsController.getSubmissionStats
+);
+
 // Grade a specific submission
 router.put(
   "/assignment/:assignmentId/user/:userId/grade",
@@ -72,4 +107,21 @@ router.put(
   requireRole("instructor", "admin"),
   SubmissionsController.gradeSubmission
 );
+
+// 🆕 NEW: Alternative grading route to match StudentManagement component expectations
+router.put(
+  "/grade/:assignmentId/:userId",
+  authenticateToken,
+  requireRole("instructor", "admin"),
+  SubmissionsController.gradeSubmission
+);
+
+// 🆕 NEW: Bulk grading functionality for instructors
+router.post(
+  "/bulk-grade",
+  authenticateToken,
+  requireRole("instructor", "admin"),
+  SubmissionsController.bulkGradeSubmissions
+);
+
 export default router;

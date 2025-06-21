@@ -27,14 +27,6 @@ console.log(
 );
 console.log("  DB_PASSWORD length:", DB_PASSWORD.length);
 
-// Validate that password is not empty
-if (!DB_PASSWORD || DB_PASSWORD === "undefined" || DB_PASSWORD === "null") {
-  console.error("❌ CRITICAL: Database password is empty or invalid!");
-  console.error("   Current value:", DB_PASSWORD);
-  console.error("   Please check your .env file");
-  process.exit(1);
-}
-
 // Database configuration object
 const dbConfig = {
   host: DB_HOST,
@@ -73,17 +65,17 @@ export const pool = new Pool(dbConfig);
 // Test Sequelize connection
 export const testConnection = async () => {
   try {
-    console.log("🔄 Testing Sequelize connection...");
+    console.log(" Testing Sequelize connection...");
     await sequelize.authenticate();
-    console.log("✅ Sequelize: Database connection established successfully.");
+    console.log(" Sequelize: Database connection established successfully.");
 
     // Test raw query
     const [results] = await sequelize.query("SELECT NOW() as current_time", {
       type: sequelize.QueryTypes.SELECT,
     });
-    console.log("✅ Sequelize test query result:", results.current_time);
+    console.log(" Sequelize test query result:", results.current_time);
   } catch (error) {
-    console.error("❌ Sequelize connection failed:");
+    console.error(" Sequelize connection failed:");
     console.error("   Error:", error.message);
     console.error("   Code:", error.code);
     throw error;
@@ -93,16 +85,16 @@ export const testConnection = async () => {
 // Test raw pool connection
 export const testPoolConnection = async () => {
   try {
-    console.log("🔄 Testing Pool connection...");
+    console.log(" Testing Pool connection...");
     const client = await pool.connect();
 
     const result = await client.query("SELECT NOW() as current_time");
-    console.log("✅ Pool: Database connection established successfully.");
-    console.log("✅ Pool test query result:", result.rows[0].current_time);
+    console.log(" Pool: Database connection established successfully.");
+    console.log(" Pool test query result:", result.rows[0].current_time);
 
     client.release();
   } catch (error) {
-    console.error("❌ Pool connection failed:");
+    console.error(" Pool connection failed:");
     console.error("   Error:", error.message);
     console.error("   Code:", error.code);
     throw error;
@@ -111,7 +103,7 @@ export const testPoolConnection = async () => {
 
 // Handle pool errors
 pool.on("error", (err) => {
-  console.error("❌ Unexpected error on idle client:", err);
+  console.error("Unexpected error on idle client:", err);
 });
 
 // Graceful shutdown
@@ -119,9 +111,9 @@ export const closeConnections = async () => {
   try {
     await sequelize.close();
     await pool.end();
-    console.log("🔒 Database connections closed successfully.");
+    console.log(" Database connections closed successfully.");
   } catch (error) {
-    console.error("❌ Error closing database connections:", error);
+    console.error(" Error closing database connections:", error);
   }
 };
 
@@ -130,9 +122,9 @@ const initializeDatabase = async () => {
   try {
     await testConnection();
     await testPoolConnection();
-    console.log("🎉 All database connections initialized successfully!");
+    console.log(" All database connections initialized successfully!");
   } catch (error) {
-    console.error("💥 Database initialization failed:", error);
+    console.error(" Database initialization failed:", error);
     process.exit(1);
   }
 };

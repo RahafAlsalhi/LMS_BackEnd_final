@@ -1,0 +1,2 @@
+how to navigate between pages 
+how did you use useEffect to make the page on landing go up 

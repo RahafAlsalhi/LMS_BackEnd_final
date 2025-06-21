@@ -4,9 +4,10 @@ import { QuizzesModel } from "../models/quizzes.model.js";
 
 export class QuizAttemptsController {
   // Submit quiz attempt
+  // Modified submitAttempt method to allow retakes
   static async submitAttempt(req, res) {
     const { quiz_id, selected_answer } = req.body;
-    const user_id = req.user.userId; // ✅ Fixed
+    const user_id = req.user.userId;
 
     console.log("🔍 Debug info:");
     console.log("- Quiz ID:", quiz_id);
@@ -14,20 +15,8 @@ export class QuizAttemptsController {
     console.log("- User ID:", user_id);
 
     try {
-      // Check if user already attempted this quiz
-      const existingAttempt = await pool.query(
-        "SELECT id FROM quiz_attempts WHERE quiz_id = $1 AND user_id = $2",
-        [quiz_id, user_id]
-      );
-
-      if (existingAttempt.rows.length > 0) {
-        return res.status(400).json({
-          message: "You have already attempted this quiz",
-        });
-      }
-
       // Get quiz details to check correct answer
-      const quiz = await QuizzesModel.getQuizById(quiz_id); // ✅ Use the model
+      const quiz = await QuizzesModel.getQuizById(quiz_id);
 
       if (!quiz) {
         return res.status(404).json({ message: "Quiz not found" });
@@ -35,17 +24,18 @@ export class QuizAttemptsController {
 
       const is_correct = parseInt(selected_answer) === quiz.correct_answer;
 
-      // Use the model method instead of direct SQL
+      // Use upsert to either insert new attempt or update existing one
       const attempt = await QuizzesModel.submitQuizAnswer(
         quiz_id,
         user_id,
         selected_answer,
         is_correct
-      ); // ✅ Use the model method
+      );
 
       res.status(201).json({
         ...attempt,
         points_earned: is_correct ? quiz.points : 0,
+        message: "Quiz attempt submitted successfully",
       });
     } catch (error) {
       console.error("Error submitting quiz attempt:", error);

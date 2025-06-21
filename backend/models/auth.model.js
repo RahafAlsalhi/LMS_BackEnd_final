@@ -30,9 +30,10 @@ export const userModel = {
   },
 
   // Get user by ID
+  // Updated findById method - includes is_approved
   async findById(userId) {
     const result = await pool.query(
-      "SELECT id, name, email, role, avatar_url, is_active FROM users WHERE id = $1 AND is_active = true",
+      "SELECT id, name, email, role, avatar_url, is_active, is_approved FROM users WHERE id = $1 AND is_active = true",
       [userId]
     );
     return result.rows[0];
