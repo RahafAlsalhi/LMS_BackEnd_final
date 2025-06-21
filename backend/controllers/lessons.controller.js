@@ -132,7 +132,7 @@ export const LessonsController = {
   async markLessonComplete(req, res) {
     try {
       const { id } = req.params;
-      const { id: userId } = req.user;
+      const userId = req.user.userId;
 
       // Check if lesson exists
       const lessonExists = await LessonsModel.checkLessonExists(id);
@@ -156,7 +156,7 @@ export const LessonsController = {
   async getCourseProgress(req, res) {
     try {
       const { courseId } = req.params;
-      const { id: userId } = req.user;
+      const userId = req.user.userId;
 
       const progress = await LessonsModel.getLessonProgressByCourse(
         courseId,

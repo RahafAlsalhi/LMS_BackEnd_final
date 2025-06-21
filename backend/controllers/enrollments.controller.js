@@ -1,6 +1,6 @@
 // backend/controllers/enrollments.controller.js
 import { EnrollmentsModel } from "../models/enrollments.model.js";
-
+import { pool } from "../config/database.js";
 export const EnrollmentsController = {
   // Enroll in course
   async enrollInCourse(req, res) {
@@ -39,12 +39,12 @@ export const EnrollmentsController = {
       res.status(500).json({ message: "Server error" });
     }
   },
-  // Add this method to your EnrollmentsController class
 
+  // 🆕 Get course enrollments with detailed student information (Instructor Only)
   async getCourseEnrollments(req, res) {
     try {
       const { courseId } = req.params;
-      const instructorId = req.user.id;
+      const instructorId = req.user.userId;
 
       // First verify that the instructor owns this course
       const courseCheckResult = await pool.query(
@@ -79,6 +79,114 @@ export const EnrollmentsController = {
       });
     }
   },
+
+  // 🆕 Get detailed course enrollments with progress and performance data
+  async getCourseEnrollmentsWithDetails(req, res) {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.userId;
+
+      // Verify instructor owns the course
+      const courseCheckResult = await pool.query(
+        `SELECT instructor_id FROM courses WHERE id = $1`,
+        [courseId]
+      );
+
+      if (courseCheckResult.rows.length === 0) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      if (courseCheckResult.rows[0].instructor_id !== instructorId) {
+        return res.status(403).json({
+          message: "Access denied. You can only view your own course data.",
+        });
+      }
+
+      const enrollments =
+        await EnrollmentsModel.getCourseEnrollmentsWithDetails(courseId);
+
+      res.json(enrollments);
+    } catch (error) {
+      console.error("Error fetching detailed enrollments:", error);
+      res.status(500).json({
+        message: "Failed to fetch detailed enrollment data",
+        error: error.message,
+      });
+    }
+  },
+
+  // 🆕 Get comprehensive course analytics
+  async getCourseAnalytics(req, res) {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.userId;
+
+      // Verify instructor owns the course
+      const courseCheckResult = await pool.query(
+        `SELECT instructor_id FROM courses WHERE id = $1`,
+        [courseId]
+      );
+
+      if (courseCheckResult.rows.length === 0) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      if (courseCheckResult.rows[0].instructor_id !== instructorId) {
+        return res.status(403).json({
+          message:
+            "Access denied. You can only view your own course analytics.",
+        });
+      }
+
+      const analytics = await EnrollmentsModel.getCourseAnalytics(courseId);
+
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching course analytics:", error);
+      res.status(500).json({
+        message: "Failed to fetch course analytics",
+        error: error.message,
+      });
+    }
+  },
+
+  // 🆕 Get ungraded submissions for a course
+  async getUngradedSubmissions(req, res) {
+    try {
+      const { courseId } = req.params;
+      const instructorId = req.user.userId;
+
+      // Verify instructor owns the course
+      const courseCheckResult = await pool.query(
+        `SELECT instructor_id FROM courses WHERE id = $1`,
+        [courseId]
+      );
+
+      if (courseCheckResult.rows.length === 0) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      if (courseCheckResult.rows[0].instructor_id !== instructorId) {
+        return res.status(403).json({
+          message:
+            "Access denied. You can only view your own course submissions.",
+        });
+      }
+
+      const ungradedSubmissions = await EnrollmentsModel.getUngradedSubmissions(
+        courseId
+      );
+
+      res.json(ungradedSubmissions);
+    } catch (error) {
+      console.error("Error fetching ungraded submissions:", error);
+      res.status(500).json({
+        message: "Failed to fetch ungraded submissions",
+        error: error.message,
+      });
+    }
+  },
+
   // Get admin statistics
   async getAdminStats(req, res) {
     try {

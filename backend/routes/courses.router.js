@@ -31,7 +31,12 @@ router.get("/published", CoursesController.getPublishedCourses);
 
 // Get all courses (public, published and approved only)
 router.get("/", CoursesController.getAllPublicCourses);
-
+router.get(
+  "/:id/edit-details",
+  authenticateToken,
+  requireRole("instructor", "admin"),
+  CoursesController.getCourseEditDetails
+);
 // Get course by ID (parameterized route - MUST BE LAST)
 router.get("/:id", CoursesController.getCourseById);
 
@@ -65,5 +70,6 @@ router.get(
   requireRole("instructor", "admin"),
   CoursesController.getCourseDetailsForInstructor
 );
+
 
 export default router;

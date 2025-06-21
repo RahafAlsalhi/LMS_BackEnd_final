@@ -1,0 +1,6 @@
+how to navigate between pages 
+how did you use useEffect to make the page on landing go up 
+use effect : 
+hook mn react hooks 
+ejt to replace the life sycle ta3t react el old 
+wich is component is mouniting copm is update comp unmount 

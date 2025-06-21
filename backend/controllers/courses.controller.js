@@ -366,4 +366,72 @@ export const CoursesController = {
       });
     }
   },
+  // Get course details with all modules, lessons, assignments, and quizzes for editing
+  // Replace your getCourseEditDetails method in courses.controller.js with this debug version
+  async getCourseEditDetails(req, res) {
+    try {
+      const { id } = req.params;
+      const instructorId = req.user.userId;
+
+      console.log("🔍 Getting course edit details for:", id);
+      console.log("🔍 Instructor ID:", instructorId);
+
+      // Verify instructor owns this course (unless admin)
+      console.log("🔍 Step 1: Getting basic course info...");
+      const course = await CoursesModel.getCourseById(id);
+      if (!course) {
+        console.log("❌ Course not found");
+        return res.status(404).json({ message: "Course not found" });
+      }
+      console.log("✅ Basic course found:", course.title);
+
+      if (course.instructor_id !== instructorId && req.user.role !== "admin") {
+        console.log("❌ Access denied");
+        return res.status(403).json({
+          message: "Access denied. You can only edit your own courses.",
+        });
+      }
+      console.log("✅ Authorization passed");
+
+      // Get course with full structure
+      console.log("🔍 Step 2: Getting course with full structure...");
+      try {
+        const courseWithStructure =
+          await CoursesModel.getCourseWithFullStructure(id);
+        console.log(
+          "✅ Course structure loaded successfully:",
+          courseWithStructure?.title
+        );
+
+        res.json({
+          success: true,
+          course: courseWithStructure,
+        });
+      } catch (structureError) {
+        console.error(
+          "❌ Error in getCourseWithFullStructure:",
+          structureError
+        );
+        console.error("❌ Error message:", structureError.message);
+        console.error("❌ Error stack:", structureError.stack);
+
+        // Return the basic course info if full structure fails
+        console.log("🔧 Falling back to basic course info...");
+        res.json({
+          success: true,
+          course: course,
+          warning: "Full course structure could not be loaded",
+          error: structureError.message,
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error in getCourseEditDetails:", error);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
+      res.status(500).json({
+        message: "Failed to fetch course details for editing",
+        error: error.message,
+      });
+    }
+  },
 };

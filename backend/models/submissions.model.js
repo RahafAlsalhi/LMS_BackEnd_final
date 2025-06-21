@@ -1,4 +1,4 @@
-// backend/models/submissions.model.js
+// backend/models/submissions.model.js - FINAL CORRECTED VERSION
 import { pool } from "../config/database.js";
 
 export const SubmissionsModel = {
@@ -22,11 +22,12 @@ export const SubmissionsModel = {
   async getSubmission(assignmentId, userId) {
     const result = await pool.query(
       `SELECT s.*, a.title as assignment_title, a.max_points, a.deadline,
-              u.username as student_name
-       FROM submissions s
-       JOIN assignments a ON s.assignment_id = a.id
-       JOIN users u ON s.user_id = u.id
-       WHERE s.assignment_id = $1 AND s.user_id = $2`,
+            COALESCE(u.name, u.email) as student_name,
+            u.email as student_email
+     FROM submissions s
+     JOIN assignments a ON s.assignment_id = a.id
+     JOIN users u ON s.user_id = u.id
+     WHERE s.assignment_id = $1 AND s.user_id = $2`,
       [assignmentId, userId]
     );
     return result.rows[0];
@@ -35,13 +36,15 @@ export const SubmissionsModel = {
   // Get all submissions for an assignment (Instructor)
   async getSubmissionsByAssignment(assignmentId) {
     const result = await pool.query(
-      `SELECT s.*, u.username as student_name, u.email as student_email,
-              grader.username as grader_name
-       FROM submissions s
-       JOIN users u ON s.user_id = u.id
-       LEFT JOIN users grader ON s.graded_by = grader.id
-       WHERE s.assignment_id = $1
-       ORDER BY s.submitted_at DESC`,
+      `SELECT s.*, 
+            COALESCE(u.name, u.email) as student_name,
+            COALESCE(grader.name, grader.email) as grader_name,
+            u.email as student_email
+     FROM submissions s
+     JOIN users u ON s.user_id = u.id
+     LEFT JOIN users grader ON s.graded_by = grader.id
+     WHERE s.assignment_id = $1
+     ORDER BY s.submitted_at DESC`,
       [assignmentId]
     );
     return result.rows;
@@ -59,16 +62,16 @@ export const SubmissionsModel = {
       JOIN courses c ON m.course_id = c.id
       WHERE s.user_id = $1
     `;
-    
+
     const params = [userId];
-    
+
     if (lessonId) {
       query += " AND a.lesson_id = $2";
       params.push(lessonId);
     }
-    
+
     query += " ORDER BY s.submitted_at DESC";
-    
+
     const result = await pool.query(query, params);
     return result.rows;
   },
