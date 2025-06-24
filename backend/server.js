@@ -7,8 +7,7 @@ import multer from "multer";
 import { fileURLToPath } from "url";
 import { Pool } from "pg";
 import dotenv from "dotenv";
-// In your app.js or server.js
-// Import routers
+
 import authRouter from "./routes/auth.router.js";
 import usersRouter from "./routes/users.router.js";
 import categoriesRouter from "./routes/categories.router.js";
@@ -255,15 +254,15 @@ process.on("SIGINT", () => {
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log("🚀 LMS Backend Server Started");
+  console.log(" LMS Backend Server Started");
   console.log("================================");
-  console.log(`📍 Port: ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`🔗 API Base: http://localhost:${PORT}/api`);
-  console.log(`💚 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`📁 File Uploads: http://localhost:${PORT}/uploads`);
+  console.log(` Port: ${PORT}`);
+  console.log(` Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(` API Base: http://localhost:${PORT}/api`);
+  console.log(` Health Check: http://localhost:${PORT}/api/health`);
+  console.log(` File Uploads: http://localhost:${PORT}/uploads`);
   if (process.env.NODE_ENV === "development") {
-    console.log(`🔍 DB Test: http://localhost:${PORT}/api/test-db`);
+    console.log(` DB Test: http://localhost:${PORT}/api/test-db`);
   }
   console.log("================================");
 });
@@ -271,10 +270,10 @@ const server = app.listen(PORT, () => {
 // Handle server startup errors
 server.on("error", (error) => {
   if (error.code === "EADDRINUSE") {
-    console.error(`❌ Port ${PORT} is already in use`);
+    console.error(` Port ${PORT} is already in use`);
     process.exit(1);
   } else {
-    console.error("❌ Server startup error:", error);
+    console.error(" Server startup error:", error);
     process.exit(1);
   }
 });

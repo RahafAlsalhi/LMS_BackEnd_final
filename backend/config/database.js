@@ -22,7 +22,7 @@ console.log("  DB_NAME:", DB_NAME, typeof DB_NAME);
 console.log("  DB_USER:", DB_USER, typeof DB_USER);
 console.log(
   "  DB_PASSWORD:",
-  DB_PASSWORD ? "***SET***" : "❌ EMPTY",
+  DB_PASSWORD ? "***SET***" : " EMPTY",
   typeof DB_PASSWORD
 );
 console.log("  DB_PASSWORD length:", DB_PASSWORD.length);
@@ -36,7 +36,7 @@ const dbConfig = {
   password: DB_PASSWORD,
 };
 
-console.log("✅ Database config created successfully");
+console.log("Database config created successfully");
 
 // Sequelize instance
 export const sequelize = new Sequelize({
