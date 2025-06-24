@@ -1,0 +1,421 @@
+-- Table: public.users
+
+-- DROP TABLE IF EXISTS public.users;
+
+CREATE TABLE IF NOT EXISTS public.users
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    name character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    email character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    password_hash character varying(255) COLLATE pg_catalog."default",
+    role character varying(50) COLLATE pg_catalog."default" NOT NULL DEFAULT 'student'::character varying,
+    oauth_provider character varying(50) COLLATE pg_catalog."default",
+    oauth_id character varying(255) COLLATE pg_catalog."default",
+    avatar_url text COLLATE pg_catalog."default",
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    is_approved boolean DEFAULT true,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
+    CONSTRAINT users_email_key UNIQUE (email),
+    CONSTRAINT users_role_check CHECK (role::text = ANY (ARRAY['student'::character varying, 'instructor'::character varying, 'admin'::character varying]::text[]))
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.users
+    OWNER to postgres;
+-- Index: idx_users_email
+
+-- DROP INDEX IF EXISTS public.idx_users_email;
+
+CREATE INDEX IF NOT EXISTS idx_users_email
+    ON public.users USING btree
+    (email COLLATE pg_catalog."default" ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: idx_users_role
+
+-- DROP INDEX IF EXISTS public.idx_users_role;
+
+CREATE INDEX IF NOT EXISTS idx_users_role
+    ON public.users USING btree
+    (role COLLATE pg_catalog."default" ASC NULLS LAST)
+    TABLESPACE pg_default;
+    //////////////
+
+    -- Table: public.categories
+
+-- DROP TABLE IF EXISTS public.categories;
+
+CREATE TABLE IF NOT EXISTS public.categories
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    name character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    description text COLLATE pg_catalog."default",
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT categories_pkey PRIMARY KEY (id),
+    CONSTRAINT categories_name_key UNIQUE (name)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.categories
+    OWNER to postgres;
+    //////////////////
+    -- Table: public.courses
+
+-- DROP TABLE IF EXISTS public.courses;
+
+CREATE TABLE IF NOT EXISTS public.courses
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    title character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    description text COLLATE pg_catalog."default",
+    instructor_id uuid NOT NULL,
+    category_id uuid,
+    thumbnail_url text COLLATE pg_catalog."default",
+    price numeric(10,2) DEFAULT 0,
+    is_published boolean DEFAULT false,
+    is_approved boolean,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT courses_pkey PRIMARY KEY (id),
+    CONSTRAINT courses_category_id_fkey FOREIGN KEY (category_id)
+        REFERENCES public.categories (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE SET NULL,
+    CONSTRAINT courses_instructor_id_fkey FOREIGN KEY (instructor_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.courses
+    OWNER to postgres;
+-- Index: idx_courses_category
+
+-- DROP INDEX IF EXISTS public.idx_courses_category;
+
+CREATE INDEX IF NOT EXISTS idx_courses_category
+    ON public.courses USING btree
+    (category_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: idx_courses_instructor
+
+-- DROP INDEX IF EXISTS public.idx_courses_instructor;
+
+CREATE INDEX IF NOT EXISTS idx_courses_instructor
+    ON public.courses USING btree
+    (instructor_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+    //////////////////////
+    -- Table: public.categories
+
+-- DROP TABLE IF EXISTS public.categories;
+
+CREATE TABLE IF NOT EXISTS public.categories
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    name character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    description text COLLATE pg_catalog."default",
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT categories_pkey PRIMARY KEY (id),
+    CONSTRAINT categories_name_key UNIQUE (name)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.categories
+    OWNER to postgres;
+    /////////////////////////////
+    -- Table: public.enrollments
+
+-- DROP TABLE IF EXISTS public.enrollments;
+
+CREATE TABLE IF NOT EXISTS public.enrollments
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    course_id uuid NOT NULL,
+    enrolled_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    completed_at timestamp without time zone,
+    progress integer DEFAULT 0,
+    CONSTRAINT enrollments_user_id_course_id_key UNIQUE (user_id, course_id),
+    CONSTRAINT enrollments_course_id_fkey FOREIGN KEY (course_id)
+        REFERENCES public.courses (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT enrollments_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT enrollments_progress_check CHECK (progress >= 0 AND progress <= 100)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.enrollments
+    OWNER to postgres;
+-- Index: idx_enrollments_course
+
+-- DROP INDEX IF EXISTS public.idx_enrollments_course;
+
+CREATE INDEX IF NOT EXISTS idx_enrollments_course
+    ON public.enrollments USING btree
+    (course_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: idx_enrollments_user
+
+-- DROP INDEX IF EXISTS public.idx_enrollments_user;
+
+CREATE INDEX IF NOT EXISTS idx_enrollments_user
+    ON public.enrollments USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+    ////////////////////
+    -- Table: public.modules
+
+-- DROP TABLE IF EXISTS public.modules;
+
+CREATE TABLE IF NOT EXISTS public.modules
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    course_id uuid NOT NULL,
+    title character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    description text COLLATE pg_catalog."default",
+    order_index integer NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT modules_pkey PRIMARY KEY (id),
+    CONSTRAINT modules_course_id_fkey FOREIGN KEY (course_id)
+        REFERENCES public.courses (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.modules
+    OWNER to postgres;
+-- Index: idx_modules_course
+
+-- DROP INDEX IF EXISTS public.idx_modules_course;
+
+CREATE INDEX IF NOT EXISTS idx_modules_course
+    ON public.modules USING btree
+    (course_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+    //////////////////////
+    -- Table: public.lessons
+
+-- DROP TABLE IF EXISTS public.lessons;
+
+CREATE TABLE IF NOT EXISTS public.lessons
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    module_id uuid NOT NULL,
+    title character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    content_type character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    content_url text COLLATE pg_catalog."default",
+    content_text text COLLATE pg_catalog."default",
+    duration integer DEFAULT 0,
+    order_index integer NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT lessons_pkey PRIMARY KEY (id),
+    CONSTRAINT lessons_module_id_fkey FOREIGN KEY (module_id)
+        REFERENCES public.modules (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT lessons_content_type_check CHECK (content_type::text = ANY (ARRAY['video'::character varying::text, 'quiz'::character varying::text, 'text'::character varying::text, 'assignment'::character varying::text]))
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.lessons
+    OWNER to postgres;
+-- Index: idx_lessons_module
+
+-- DROP INDEX IF EXISTS public.idx_lessons_module;
+
+CREATE INDEX IF NOT EXISTS idx_lessons_module
+    ON public.lessons USING btree
+    (module_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+    ///////////////////
+    -- Table: public.lesson_completions
+
+-- DROP TABLE IF EXISTS public.lesson_completions;
+
+CREATE TABLE IF NOT EXISTS public.lesson_completions
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    lesson_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    completed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT lesson_completions_pkey PRIMARY KEY (id),
+    CONSTRAINT lesson_completions_lesson_id_user_id_key UNIQUE (lesson_id, user_id),
+    CONSTRAINT lesson_completions_lesson_id_fkey FOREIGN KEY (lesson_id)
+        REFERENCES public.lessons (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT lesson_completions_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.lesson_completions
+    OWNER to postgres;
+-- Index: idx_lesson_completions_lesson
+
+-- DROP INDEX IF EXISTS public.idx_lesson_completions_lesson;
+
+CREATE INDEX IF NOT EXISTS idx_lesson_completions_lesson
+    ON public.lesson_completions USING btree
+    (lesson_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: idx_lesson_completions_user
+
+-- DROP INDEX IF EXISTS public.idx_lesson_completions_user;
+
+CREATE INDEX IF NOT EXISTS idx_lesson_completions_user
+    ON public.lesson_completions USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+    /////////////////////
+    -- Table: public.quizzes
+
+-- DROP TABLE IF EXISTS public.quizzes;
+
+CREATE TABLE IF NOT EXISTS public.quizzes
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    lesson_id uuid NOT NULL,
+    question text COLLATE pg_catalog."default" NOT NULL,
+    options jsonb NOT NULL,
+    correct_answer integer NOT NULL,
+    points integer DEFAULT 1,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT quizzes_pkey PRIMARY KEY (id),
+    CONSTRAINT quizzes_lesson_id_fkey FOREIGN KEY (lesson_id)
+        REFERENCES public.lessons (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.quizzes
+    OWNER to postgres;
+    ////////////////////
+    -- Table: public.quiz_attempts
+
+-- DROP TABLE IF EXISTS public.quiz_attempts;
+
+CREATE TABLE IF NOT EXISTS public.quiz_attempts
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    quiz_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    selected_answer integer NOT NULL,
+    is_correct boolean NOT NULL,
+    attempted_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT quiz_attempts_pkey PRIMARY KEY (id),
+    CONSTRAINT quiz_attempts_quiz_id_user_id_key UNIQUE (quiz_id, user_id),
+    CONSTRAINT quiz_attempts_quiz_id_fkey FOREIGN KEY (quiz_id)
+        REFERENCES public.quizzes (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT quiz_attempts_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.quiz_attempts
+    OWNER to postgres;
+    ///////////////////////
+    -- Table: public.assignments
+
+-- DROP TABLE IF EXISTS public.assignments;
+
+CREATE TABLE IF NOT EXISTS public.assignments
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    lesson_id uuid NOT NULL,
+    title character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    description text COLLATE pg_catalog."default",
+    deadline timestamp without time zone,
+    max_points integer DEFAULT 100,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT assignments_pkey PRIMARY KEY (id),
+    CONSTRAINT assignments_lesson_id_fkey FOREIGN KEY (lesson_id)
+        REFERENCES public.lessons (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.assignments
+    OWNER to postgres;
+    ///////////////
+    -- Table: public.submissions
+
+-- DROP TABLE IF EXISTS public.submissions;
+
+CREATE TABLE IF NOT EXISTS public.submissions
+(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    assignment_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    submission_url text COLLATE pg_catalog."default",
+    submission_text text COLLATE pg_catalog."default",
+    submitted_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    grade integer,
+    feedback text COLLATE pg_catalog."default",
+    graded_at timestamp without time zone,
+    graded_by uuid,
+    CONSTRAINT submissions_pkey PRIMARY KEY (id),
+    CONSTRAINT submissions_assignment_id_user_id_key UNIQUE (assignment_id, user_id),
+    CONSTRAINT submissions_assignment_id_fkey FOREIGN KEY (assignment_id)
+        REFERENCES public.assignments (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT submissions_graded_by_fkey FOREIGN KEY (graded_by)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT submissions_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.submissions
+    OWNER to postgres;
+-- Index: idx_submissions_assignment
+
+-- DROP INDEX IF EXISTS public.idx_submissions_assignment;
+
+CREATE INDEX IF NOT EXISTS idx_submissions_assignment
+    ON public.submissions USING btree
+    (assignment_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: idx_submissions_user
+
+-- DROP INDEX IF EXISTS public.idx_submissions_user;
+
+CREATE INDEX IF NOT EXISTS idx_submissions_user
+    ON public.submissions USING btree
+    (user_id ASC NULLS LAST)
+    TABLESPACE pg_default;

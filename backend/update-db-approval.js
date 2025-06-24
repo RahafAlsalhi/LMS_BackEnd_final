@@ -15,19 +15,19 @@ const pool = new Pool({
 });
 
 async function updateDatabase() {
-  console.log("🔄 Updating database for approval system...");
+  // console.log("🔄 Updating database for approval system...");
 
   try {
     const client = await pool.connect();
 
     // Add approval column if it doesn't exist
-    console.log("📝 Adding is_approved column...");
+    // console.log("📝 Adding is_approved column...");
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT true;
     `);
 
     // Update existing users
-    console.log("👥 Updating existing users...");
+    // console.log("👥 Updating existing users...");
 
     // Make students and admins approved by default
     await client.query(`
@@ -56,7 +56,7 @@ async function updateDatabase() {
       ORDER BY role, is_approved;
     `);
 
-    console.log("\n📊 User approval status:");
+    // console.log("\n📊 User approval status:");
     userStats.rows.forEach((row) => {
       console.log(
         `   ${row.role}: ${row.is_approved ? "Approved" : "Pending"} - ${
@@ -66,14 +66,14 @@ async function updateDatabase() {
     });
 
     client.release();
-    console.log("\n✅ Database updated successfully!");
-    console.log("\n🎯 What happens now:");
-    console.log("   • New instructor registrations will need admin approval");
-    console.log("   • Existing instructors with courses remain approved");
-    console.log("   • Students and admins are auto-approved");
-    console.log("   • Only approved instructors can create courses");
+    // console.log("\n✅ Database updated successfully!");
+    // console.log("\n🎯 What happens now:");
+    // console.log("   • New instructor registrations will need admin approval");
+    // console.log("   • Existing instructors with courses remain approved");
+    // console.log("   • Students and admins are auto-approved");
+    // console.log("   • Only approved instructors can create courses");
   } catch (error) {
-    console.error("❌ Database update failed:", error.message);
+    // console.error("❌ Database update failed:", error.message);
   }
 
   await pool.end();
